@@ -3,6 +3,7 @@ import os
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 import torchvision.transforms as T
+import torch
 from dataclasses import dataclass
 
 from src.logger import logging
@@ -20,8 +21,28 @@ class BatchCreationConfig:
     pin_memory = True
 
 class BatchCreation:
-    def __init__(self):
+    def __init__(self, device):
         self.batch_creation = BatchCreationConfig()
+    
+    def __iter__(self):
+        """Yield a batch of data after moving it to device"""
+        for b in self.dl:
+            yield self.to_device(b, self.device)
+
+    def __len__(self):
+        """Number of batches"""
+        return len(self.dl)
+
+    def to_device(self, data, device):
+        try:
+            """Move tensor(s) to chosen device"""
+            if isinstance(data, (list,tuple)):
+                return [self.to_device(x, device) for x in data]
+            return data.to(device, non_blocking=True)
+
+        except Exception as e:
+            logging.info("Error in to_device")
+            raise CustomException(e,sys)
 
     def initiate_batch_creation(self):
         try:
@@ -40,6 +61,7 @@ class BatchCreation:
                 pin_memory=self.batch_creation.pin_memory
             )
             logging.info("Successfully initiated batch_creation")
+            print("Successfully initiated batch_creation")
             return train_dl
 
         except Exception as e:
@@ -47,5 +69,9 @@ class BatchCreation:
             raise CustomException(e,sys)
         
 if __name__ == "__main__":
-    batch_creation_obj = BatchCreation()
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    batch_creation_obj = BatchCreation(device=device)
     batch_creation_obj.initiate_batch_creation()
