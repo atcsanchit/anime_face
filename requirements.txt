@@ -1,5 +1,6 @@
 pandas
 numpy
-tensorflow
 matplotlib
+torch
+torchvision
 -e .
